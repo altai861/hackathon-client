@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import API_URL from '../../api';
 export default function SignUp() {
   const [fadeIn, setFadeIn] = useState(false);
   const [cars, setCars] = useState([
@@ -7,19 +9,39 @@ export default function SignUp() {
     { id: 2, color: 'bg-green-400', delay: 1000 },
     { id: 3, color: 'bg-blue-400', delay: 2000 },
   ]);
-
+  const [email, setEmail] = useState(''); 
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
   useEffect(() => {
     setFadeIn(true);
   }, []);
-  
+    const handleSignUp = async () => {
+    try {
+      const res = await axios.post(API_URL+'/auth/register', {
+        email,
+        username,
+        password,
+      });
+
+      if (res.data.success) {
+        navigate('/login');
+      } else {
+        setError('Алдаа гарлаа. Дахин оролдоно уу.');
+      }
+    } catch (err) {
+      setError('Сервэрийн алдаа.');
+    }
+  };
   return (
     <div className="relative w-full h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 via-gray-800 to-gray-700 overflow-hidden">
       
       {/* Logo on top-left corner */}
-      <div className="absolute top-18 left-4 z-50 flex items-center -translate-y-1/2">
+        <div className="absolute top-0 left-4 z-50 flex items-center -translate-y-4">
+        <img src="/logo.png" alt="Logo" className="h-40 w-auto" />
+        </div>
 
-        <img src="/logo.png" alt="Logo" className="h-50 w-auto" />
-      </div>
 
       {/* Road white lines */}
       <div className="absolute bottom-16 w-full flex justify-between px-10 z-20">
@@ -67,31 +89,38 @@ export default function SignUp() {
           fadeIn ? 'opacity-100' : 'opacity-0'
         }`}
       >
-        <h2 className="text-2xl font-bold mb-6 text-center text-white">Sign Up to Smart Parking</h2>
-        <input
+    <div className="mb-6 text-center text-white">
+        <h2 className="text-2xl font-bold">Зогсоолын Туслах</h2>
+        <p className="text-lg mt-2 font-bold text-pink-500">Бүртгүүлэх</p>
+        </div>
+            <input
             type="email"
             placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className="w-full mb-4 px-4 py-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-pink-400"
-        />
+            />
 
-        {/* Username */}
-        <input
+            <input
             type="text"
             placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             className="w-full mb-4 px-4 py-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-pink-400"
-        />
+            />
 
-        {/* Password */}
-        <input
+            <input
             type="password"
             placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             className="w-full mb-4 px-4 py-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-pink-400"
-        />
-        <button className="w-full bg-pink-400 hover:bg-pink-500 text-white py-2 rounded transition">
-          Sign In
+            />
+        <button onClick={handleSignUp} className="w-full bg-pink-400 hover:bg-pink-500 text-white py-2 rounded transition">
+          Бүртгүүлэх
         </button>
         <div className="mt-4 text-sm text-gray-400 text-center">
-          <Link to="/" className="hover:underline">Back to Login</Link>
+          <Link to="/login" className="hover:underline">Буцах</Link>
         </div>
       </div>
 
