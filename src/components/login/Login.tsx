@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-
+import API_URL from '../../api';
 export default function Login() {
   const [fadeIn, setFadeIn] = useState(false);
   const [cars, setCars] = useState([
@@ -21,13 +21,13 @@ export default function Login() {
 
   const handleLogin = async () => {
     try {
-      const res = await axios.post('http://192.168.1.210:3000/auth/login', {
+      const res = await axios.post(API_URL+'/auth/login', {
         username,
         password,
       });
 
       if (res.data.success) {
-        navigate('/landingpage');
+        navigate('/main');
       } else {
         setError('Invalid username or password');
       }
@@ -39,10 +39,10 @@ export default function Login() {
   return (
     <div className="relative w-full h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 via-gray-800 to-gray-700 overflow-hidden">
       {/* Logo */}
-      <div className="absolute top-2 left-4 z-50 flex items-center">
-        <img src="/logo.png" alt="Logo" className="h-12 w-auto" />
-      </div>
-
+        <div className="absolute top-0 left-4 z-50 flex items-center -translate-y-4">
+        <img src="/logo.png" alt="Logo" className="h-40 w-auto" />
+        </div>
+        
       {/* Road white lines */}
       <div className="absolute bottom-16 w-full flex justify-between px-10 z-20">
         {Array.from({ length: 10 }).map((_, idx) => (
@@ -89,7 +89,10 @@ export default function Login() {
           fadeIn ? 'opacity-100' : 'opacity-0'
         }`}
       >
-        <h2 className="text-2xl font-bold mb-6 text-center text-white">Login to Smart Parking</h2>
+        <div className="mb-6 text-center text-white">
+        <h2 className="text-2xl font-bold">Зогсоолын Туслах</h2>
+        <p className="text-lg mt-2 font-bold text-pink-500">Нэвтрэх</p>
+        </div>
 
         <input
           type="text"
@@ -112,12 +115,12 @@ export default function Login() {
           onClick={handleLogin}
           className="w-full bg-pink-400 hover:bg-pink-500 text-white py-2 rounded transition"
         >
-          Sign In
+          Нэвтрэх
         </button>
 
         <div className="flex justify-between text-sm text-gray-400 mt-4">
-          <a href="#">Forgot password?</a>
-          <Link to="/signup" className="hover:underline">Sign up</Link>
+          <a href="#">Нууц үгээ мартсан уу?</a>
+          <Link to="/signup" className="hover:underline">Бүртгүүлэх</Link>
         </div>
       </div>
 

@@ -117,7 +117,7 @@ export const LandingPage = () => {
 
       {/* Hero Section */}
       <section
-        className={`text-center py-16 transition-colors duration-300 ${
+        className={`text-center py-10 transition-colors duration-300 ${
           darkMode ? "bg-gray-800" : "bg-white"
         }`}
       >
@@ -138,7 +138,7 @@ export const LandingPage = () => {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate("/map")}
-            className="px-8 py-3 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700 transition-colors"
+            className="mt-0 px-8 py-3 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700 transition-colors"
           >
             Одоо Хайх
           </motion.button>
