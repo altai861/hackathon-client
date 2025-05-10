@@ -5,6 +5,7 @@ import { Loader } from '@googlemaps/js-api-loader';
 import axios from 'axios';
 
 import API_URL from '../../api';
+import MAP_API from '../../map_api';
 
 interface ParkingLot {
   lotId: number;
@@ -12,7 +13,10 @@ interface ParkingLot {
   total_capacity: number;
   latitude: string;
   longitude: string;
-  type: 'public' | 'paid';
+  type: boolean;
+  address: string;
+  current_occupancy: number;
+  camera_active: boolean;
 }
 
 interface ParkingForm {
@@ -22,6 +26,9 @@ interface ParkingForm {
   latitude: string;
   longitude: string;
   type: 'public' | 'paid';
+  address: string;
+  current_occupancy: number;
+  camera_active: 'active' | 'inactive';
 }
 
 const Admin: React.FC = () => {
@@ -32,10 +39,15 @@ const Admin: React.FC = () => {
     latitude: '',
     longitude: '',
     type: 'public',
+    address: '',
+    current_occupancy: 0,
+    camera_active: 'inactive',
   });
   const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
   const [marker, setMarker] = useState<google.maps.Marker | null>(null);
   const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [isLatFocused, setIsLatFocused] = useState(false);
+  const [isLngFocused, setIsLngFocused] = useState(false);
 
   useEffect(() => {
     fetchParkings();
@@ -43,42 +55,47 @@ const Admin: React.FC = () => {
 
   useEffect(() => {
     const loader = new Loader({
-      apiKey: 'AIzaSyDKMElZFbnEqcDzQwz9Gaz7u8-wcvp-1xE',
+      apiKey: MAP_API,
       version: 'weekly',
     });
 
-    loader.load().then(() => {
-      const map = new google.maps.Map(document.getElementById('map') as HTMLElement, {
-        center: { lat: 47.918873, lng: 106.917041 },
-        zoom: 12,
-      });
+    loader
+      .load()
+      .then(() => {
+        const map = new google.maps.Map(document.getElementById('map') as HTMLElement, {
+          center: { lat: 47.918873, lng: 106.917041 },
+          zoom: 12,
+        });
 
-      map.addListener('click', (e: google.maps.MapMouseEvent) => {
-        if (e.latLng) {
-          const lat = e.latLng.lat();
-          const lng = e.latLng.lng();
+        map.addListener('click', (e: google.maps.MapMouseEvent) => {
+          if (e.latLng && (isLatFocused || isLngFocused)) {
+            const lat = e.latLng.lat();
+            const lng = e.latLng.lng();
 
-          setForm((prevForm) => ({
-            ...prevForm,
-            latitude: lat.toString(),
-            longitude: lng.toString(),
-          }));
+            setForm((prevForm) => ({
+              ...prevForm,
+              latitude: lat.toString(),
+              longitude: lng.toString(),
+            }));
 
-          if (marker) {
-            marker.setPosition({ lat, lng });
-          } else {
-            const newMarker = new google.maps.Marker({
-              position: { lat, lng },
-              map,
-            });
-            setMarker(newMarker);
+            if (marker) {
+              marker.setPosition({ lat, lng });
+            } else {
+              const newMarker = new google.maps.Marker({
+                position: { lat, lng },
+                map,
+              });
+              setMarker(newMarker);
+            }
           }
-        }
-      });
+        });
 
-      setMapInstance(map);
-    });
-  }, []);
+        setMapInstance(map);
+      })
+      .catch((error) => {
+        console.error("Error loading Google Maps:", error);
+      });
+  }, [isLatFocused, isLngFocused, marker]);
 
   useEffect(() => {
     if (mapInstance && parkings.length > 0) {
@@ -98,33 +115,63 @@ const Admin: React.FC = () => {
   }, [mapInstance, parkings]);
 
   const fetchParkings = async () => {
-    const res = await axios.get<ParkingLot[]>(`${API_URL}/parkinglot`);
-    setParkings(res.data);
+    try {
+      const res = await axios.get<ParkingLot[]>(`${API_URL}/parkinglot`);
+      setParkings(res.data);
+    } catch (error) {
+      console.error("Error fetching parking lots:", error);
+    }
   };
 
   const fetchParkingById = async (lotId: number) => {
-    const res = await axios.get<ParkingLot>(`${API_URL}/parkinglot/${lotId}`);
-    setForm(res.data);
-    setIsEditing(true);
+    try {
+      const res = await axios.get<ParkingLot>(`${API_URL}/parkinglot/${lotId}`);
+      const data = res.data;
+
+      setForm({
+        ...data,
+        type: data.type ? 'public' : 'paid',
+        camera_active: data.camera_active ? 'active' : 'inactive',
+      });
+
+      setIsEditing(true);
+    } catch (error) {
+      console.error("Error fetching parking by ID:", error);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isEditing && form.lotId) {
-      await axios.put(`${API_URL}/parkinglot/${form.lotId}`, form);
-    } else {
-      await axios.post(`${API_URL}/parkinglot`, form);
-    }
 
-    setForm({
-      name: '',
-      total_capacity: 0,
-      latitude: '',
-      longitude: '',
-      type: 'public',
-    });
-    setIsEditing(false);
-    fetchParkings();
+    const payload = {
+      ...form,
+      type: form.type === 'public',
+      camera_active: form.camera_active === 'active',
+    };
+
+    try {
+      if (isEditing && form.lotId) {
+        await axios.put(`${API_URL}/parkinglot/${form.lotId}`, payload);
+      } else {
+        await axios.post(`${API_URL}/parkinglot`, payload);
+      }
+
+      setForm({
+        name: '',
+        total_capacity: 0,
+        latitude: '',
+        longitude: '',
+        type: 'public',
+        address: '',
+        current_occupancy: 0,
+        camera_active: 'inactive',
+      });
+      setIsEditing(false);
+      fetchParkings();
+      setMarker(null);
+    } catch (error) {
+      console.error("Error submitting parking lot:", error);
+    }
   };
 
   const handleChange = (
@@ -133,99 +180,60 @@ const Admin: React.FC = () => {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]: name === 'total_capacity' ? Number(value) : value,
+      [name]: name === 'total_capacity' || name === 'current_occupancy' ? Number(value) : value,
     }));
   };
 
   const handleDelete = async (lotId: number) => {
-    await axios.delete(`${API_URL}/parkinglot/${lotId}`);
-    fetchParkings();
+    try {
+      await axios.delete(`${API_URL}/parkinglot/${lotId}`);
+      fetchParkings();
+    } catch (error) {
+      console.error("Error deleting parking lot:", error);
+    }
   };
 
   return (
     <div className="flex h-screen w-full">
-      {/* Map Section */}
       <div id="map" className="w-[70%] h-full"></div>
 
-      {/* Admin Section */}
       <div className="w-[30%] p-4 overflow-y-auto bg-gray-100">
         <form onSubmit={handleSubmit} className="space-y-3">
-          <input
-            className="w-full border p-2"
-            name="name"
-            placeholder="Name"
-            value={form.name}
-            onChange={handleChange}
-          />
-          <input
-            className="w-full border p-2"
-            name="total_capacity"
-            placeholder="Spots"
-            type="number"
-            value={form.total_capacity}
-            onChange={handleChange}
-          />
-          <input
-            className="w-full border p-2"
-            name="latitude"
-            placeholder="Latitude"
-            value={form.latitude}
-            onChange={handleChange}
-          />
-          <input
-            className="w-full border p-2"
-            name="longitude"
-            placeholder="Longitude"
-            value={form.longitude}
-            onChange={handleChange}
-          />
-          <select
-            name="type"
-            value={form.type}
-            onChange={handleChange}
-            className="w-full border p-2"
-          >
-            <option value="public">Public</option>
-            <option value="paid">Paid</option>
+          <input className="w-full border p-2" name="name" placeholder="Нэр" value={form.name} onChange={handleChange} />
+          <input className="w-full border p-2" name="address" placeholder="Хаяг" value={form.address} onChange={handleChange} />
+          <input className="w-full border p-2" name="total_capacity" type="number" placeholder="Багтаамж" value={form.total_capacity} onChange={handleChange} />
+          <input className="w-full border p-2" name="current_occupancy" type="number" placeholder="Одоогийн Дүүргэлт" value={form.current_occupancy} onChange={handleChange} />
+          <input className="w-full border p-2" name="latitude" placeholder="Өргөрөг" value={form.latitude} onChange={handleChange} onFocus={() => setIsLatFocused(true)} onBlur={() => setIsLatFocused(false)} />
+          <input className="w-full border p-2" name="longitude" placeholder="Уртраг" value={form.longitude} onChange={handleChange} onFocus={() => setIsLngFocused(true)} onBlur={() => setIsLngFocused(false)} />
+
+          <select name="type" value={form.type} onChange={handleChange} className="w-full border p-2">
+            <option value="public">Нийтийн</option>
+            <option value="paid">Төлбөртэй</option>
           </select>
-          <button
-            type="submit"
-            className="bg-blue-600 text-white w-full py-2 rounded hover:bg-blue-700"
-          >
+
+          <select name="camera_active" value={form.camera_active} onChange={handleChange} className="w-full border p-2">
+            <option value="active">Камер идэвхтэй</option>
+            <option value="inactive">Камер идэвхгүй</option>
+          </select>
+
+          <button type="submit" className="bg-blue-500 text-white py-2 px-4 w-full">
             {isEditing ? 'Update Parking' : 'Add Parking'}
           </button>
         </form>
 
-        <h3 className="mt-6 text-lg font-bold">All Parkings:</h3>
-        <div className="grid grid-cols-1 gap-3 mt-3">
-          {parkings.map((p) => (
-            <div
-              key={p.lotId}
-              className="bg-white p-3 shadow rounded border border-gray-200"
-            >
-              <p className="font-semibold">{p.name}</p>
-              <p className="text-sm">
-                {p.type} - {p.total_capacity} spots
-              </p>
-              <p className="text-xs text-gray-500">
-                ({p.latitude}, {p.longitude})
-              </p>
-              <div className="flex gap-4 mt-2">
-                <button
-                  onClick={() => fetchParkingById(p.lotId)}
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(p.lotId)}
-                  className="text-sm text-red-600 hover:underline"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="mt-4">
+          <h3>Авто зогсоолууд</h3>
+          <ul className="space-y-2">
+            {parkings.map((parking) => (
+              <li key={parking.lotId} className="flex justify-between">
+                <div>{parking.name}</div>
+                <div>
+                  <button className="text-red-500" onClick={() => handleDelete(parking.lotId)}>Delete</button>
+                  <button className="text-blue-500 ml-2" onClick={() => fetchParkingById(parking.lotId)}>Edit</button>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>
