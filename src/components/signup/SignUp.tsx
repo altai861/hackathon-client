@@ -38,8 +38,8 @@ export default function SignUp() {
     <div className="relative w-full h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 via-gray-800 to-gray-700 overflow-hidden">
       
       {/* Logo on top-left corner */}
-        <div className="absolute top-0 left-4 z-50 flex items-center -translate-y-4">
-        <img src="/logo.png" alt="Logo" className="h-40 w-auto" />
+        <div className="absolute top-5 left-4 z-50 flex items-center -translate-y-4">
+        <img src="/logo.png" alt="Logo" className="h-20 w-auto" />
         </div>
 
 
