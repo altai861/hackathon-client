@@ -33,7 +33,7 @@ const demoImages = [
 ];
 
 export const LandingPage = () => {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const navigate = useNavigate();
 
   const toggleMode = () => setDarkMode(!darkMode);
@@ -88,7 +88,9 @@ export const LandingPage = () => {
     >
       {/* Header */}
       <header className="flex justify-between items-center p-6 border-b border-gray-300 dark:border-gray-700">
-        <h1 className="text-2xl font-bold">Зогсоолын туслах</h1>
+        <div className="bg-black rounded-2xl p-2">
+          <img src="/logo.png" alt="Logo" className="h-10 w-auto" />
+        </div>
         <div className="flex gap-3">
           <button
             onClick={() => navigate("/login")}
