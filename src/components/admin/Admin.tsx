@@ -2,8 +2,7 @@ import React, { useEffect, useState} from "react";
 import type { ChangeEvent } from "react";
 import type { FormEvent } from "react";
 import axios from "axios";
-
-const API_URL = "http://192.168.1.210:3000";
+import API_URL from "../../api";
 
 // Type for a single parking lot entry
 interface ParkingLot {
@@ -24,7 +23,7 @@ interface ParkingForm {
   type: "public" | "paid";
 }
 
-const AdminDashboard: React.FC = () => {
+const Admin: React.FC = () => {
   const [parkings, setParkings] = useState<ParkingLot[]>([]);
   const [form, setForm] = useState<ParkingForm>({
     name: "",
@@ -89,4 +88,4 @@ const AdminDashboard: React.FC = () => {
   );
 };
 
-export default AdminDashboard;
+export default Admin;
