@@ -89,12 +89,28 @@ export const LandingPage = () => {
       {/* Header */}
       <header className="flex justify-between items-center p-6 border-b border-gray-300 dark:border-gray-700">
         <h1 className="text-2xl font-bold">Зогсоолын туслах</h1>
-        <button
-          onClick={toggleMode}
-          className="px-4 py-2 border rounded-lg font-bold transition-colors duration-300 bg-gray-400 text-white hover:bg-gray-300"
-        >
-          {darkMode ? "☀" : "🌙"}
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => navigate("/login")}
+            className="px-6 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-300"
+          >
+            Нэвтрэх
+          </button>
+
+          <button
+            onClick={() => navigate("/signup")}
+            className="px-6 bg-gray-200 text-gray-900 rounded-lg shadow-lg hover:bg-gray-300 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-gray-300"
+          >
+            Бүртгүүлэх
+          </button>
+
+          <button
+            onClick={toggleMode}
+            className="px-4 py-2 border rounded-lg font-bold transition-colors duration-300 bg-gray-400 text-white hover:bg-gray-300"
+          >
+            {darkMode ? "☀" : "🌙"}
+          </button>
+        </div>
       </header>
 
       {/* Hero Section */}
@@ -111,9 +127,9 @@ export const LandingPage = () => {
         >
           <h2 className="text-4xl font-bold mb-4">Сул зогсоол олъё</h2>
           <p className="text-lg max-w-2xl mx-auto mb-8">
-            Хотод зогсоол олоход хэцүү байна уу? Бид танд
-            зогсоол олоход тусална - цаг хэмнэнэ, стресс бууруулна, мөн зам дээр
-            зогсоолын драмаас зайлсхийх боломжийг олгоно. 😉
+            Хотод зогсоол олоход хэцүү байна уу? Бид танд зогсоол олоход тусална
+            - цаг хэмнэнэ, стресс бууруулна, мөн зам дээр зогсоолын драмаас
+            зайлсхийх боломжийг олгоно. 😉
           </p>
 
           <motion.button
