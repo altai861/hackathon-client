@@ -16,6 +16,7 @@ interface ParkingLot {
 }
 
 interface ParkingForm {
+  lotId?: number;
   name: string;
   total_capacity: number;
   latitude: string;
@@ -34,6 +35,7 @@ const Admin: React.FC = () => {
   });
   const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
   const [marker, setMarker] = useState<google.maps.Marker | null>(null);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
 
   useEffect(() => {
     fetchParkings();
@@ -41,7 +43,7 @@ const Admin: React.FC = () => {
 
   useEffect(() => {
     const loader = new Loader({
-      apiKey: 'AIzaSyDKMElZFbnEqcDzQwz9Gaz7u8-wcvp-1xE', // Replace with your API key
+      apiKey: 'AIzaSyDKMElZFbnEqcDzQwz9Gaz7u8-wcvp-1xE',
       version: 'weekly',
     });
 
@@ -62,7 +64,6 @@ const Admin: React.FC = () => {
             longitude: lng.toString(),
           }));
 
-          // Create or update the marker
           if (marker) {
             marker.setPosition({ lat, lng });
           } else {
@@ -101,9 +102,20 @@ const Admin: React.FC = () => {
     setParkings(res.data);
   };
 
+  const fetchParkingById = async (lotId: number) => {
+    const res = await axios.get<ParkingLot>(`${API_URL}/parkinglot/${lotId}`);
+    setForm(res.data);
+    setIsEditing(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await axios.post(`${API_URL}/parkinglot`, form);
+    if (isEditing && form.lotId) {
+      await axios.put(`${API_URL}/parkinglot/${form.lotId}`, form);
+    } else {
+      await axios.post(`${API_URL}/parkinglot`, form);
+    }
+
     setForm({
       name: '',
       total_capacity: 0,
@@ -111,6 +123,7 @@ const Admin: React.FC = () => {
       longitude: '',
       type: 'public',
     });
+    setIsEditing(false);
     fetchParkings();
   };
 
@@ -179,7 +192,7 @@ const Admin: React.FC = () => {
             type="submit"
             className="bg-blue-600 text-white w-full py-2 rounded hover:bg-blue-700"
           >
-            Add Parking
+            {isEditing ? 'Update Parking' : 'Add Parking'}
           </button>
         </form>
 
@@ -197,12 +210,20 @@ const Admin: React.FC = () => {
               <p className="text-xs text-gray-500">
                 ({p.latitude}, {p.longitude})
               </p>
-              <button
-                onClick={() => handleDelete(p.lotId)}
-                className="mt-2 text-sm text-red-600 hover:underline"
-              >
-                Delete
-              </button>
+              <div className="flex gap-4 mt-2">
+                <button
+                  onClick={() => fetchParkingById(p.lotId)}
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(p.lotId)}
+                  className="text-sm text-red-600 hover:underline"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
         </div>
