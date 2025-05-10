@@ -42,7 +42,7 @@ export default function Login() {
         <div className="absolute top-0 left-4 z-50 flex items-center -translate-y-4">
         <img src="/logo.png" alt="Logo" className="h-40 w-auto" />
         </div>
-
+        
       {/* Road white lines */}
       <div className="absolute bottom-16 w-full flex justify-between px-10 z-20">
         {Array.from({ length: 10 }).map((_, idx) => (
