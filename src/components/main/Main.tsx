@@ -31,7 +31,7 @@ const parkingSpots = [
 const Main: React.FC = () => {
   useEffect(() => {
     const loader = new Loader({
-      apiKey: 'AIzaSyDKMElZFbnEqcDzQwz9Gaz7u8-wcvp-1xE', // 🔑 API KEY-гээ энд оруулна уу
+      apiKey: 'AIzaSyDKMElZFbnEqcDzQwz9Gaz7u8-wcvp-1xE',
       version: 'weekly',
       libraries: ['geometry'],
     });
