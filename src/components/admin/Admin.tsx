@@ -12,10 +12,10 @@ interface ParkingLot {
   total_capacity: number;
   latitude: string;
   longitude: string;
-  type: boolean;
   address: string;
   current_occupancy: number;
-  camera_active: boolean;
+  paid: boolean;
+  active: boolean;
 }
 
 interface ParkingForm {
@@ -24,9 +24,9 @@ interface ParkingForm {
   total_capacity: number;
   latitude: string;
   longitude: string;
-  type: string;
   address: string;
   current_occupancy: number;
+  type: string;
   camera_active: string;
 }
 
@@ -38,17 +38,17 @@ const Admin: React.FC = () => {
     total_capacity: 0,
     latitude: '',
     longitude: '',
-    type: 'public',
     address: '',
     current_occupancy: 0,
+    type: 'public',
     camera_active: 'inactive',
   });
   const [isEditing, setIsEditing] = useState(false);
-  const [isLatFocused, setIsLatFocused] = useState(false);
-  const [isLngFocused, setIsLngFocused] = useState(false);
+  const [lastAddedId, setLastAddedId] = useState<number | null>(null);
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
+  const markerMap = useRef<Map<number, google.maps.Marker>>(new Map());
 
   useEffect(() => {
     fetchParkings();
@@ -69,7 +69,7 @@ const Admin: React.FC = () => {
       mapRef.current = map;
 
       map.addListener('click', (e: google.maps.MapMouseEvent) => {
-        if (e.latLng && (isLatFocused || isLngFocused)) {
+        if (e.latLng) {
           const lat = e.latLng.lat();
           const lng = e.latLng.lng();
 
@@ -85,27 +85,48 @@ const Admin: React.FC = () => {
             const newMarker = new google.maps.Marker({
               position: { lat, lng },
               map,
+              draggable: true,
             });
+
+            newMarker.addListener('dragend', (e) => {
+              const newLat = e.latLng?.lat();
+              const newLng = e.latLng?.lng();
+              if (newLat && newLng) {
+                setForm((prevForm) => ({
+                  ...prevForm,
+                  latitude: newLat.toString(),
+                  longitude: newLng.toString(),
+                }));
+              }
+            });
+
             markerRef.current = newMarker;
           }
         }
       });
     });
-  }, [isLatFocused, isLngFocused]);
+  }, []);
 
   useEffect(() => {
+    // Clear all existing markers
+    markerMap.current.forEach((marker) => marker.setMap(null));
+    markerMap.current.clear();
+
+    // Add markers for current parkings
     if (mapRef.current && parkings.length > 0) {
       parkings.forEach((parking) => {
         const position = {
-          lat: parseFloat(parking.latitude),
-          lng: parseFloat(parking.longitude),
+          lat: parseFloat(parking.latitude.toString()),
+          lng: parseFloat(parking.longitude.toString()),
         };
 
-        new google.maps.Marker({
+        const marker = new google.maps.Marker({
           position,
-          map: mapRef.current,
+          map: mapRef.current!,
           title: parking.name,
         });
+
+        markerMap.current.set(parking.lotId, marker);
       });
     }
   }, [parkings]);
@@ -119,61 +140,81 @@ const Admin: React.FC = () => {
     }
   };
 
-
   const fetchParkingById = async (lotId: number) => {
     const res = await axios.get<ParkingLot>(`${API_URL}/parkinglot/${lotId}`);
     const data = res.data;
     setForm({
       ...data,
-      type: data.type ? 'public' : 'paid',
-      camera_active: data.camera_active ? 'active' : 'inactive',
+      type: data.paid ? 'paid' : 'public',
+      camera_active: data.active ? 'active' : 'inactive',
     });
     setIsEditing(true);
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const payload = {
-    ...form,
-    type: form.type === 'public', // Ensure correct boolean value
-    camera_active: form.camera_active === 'active', // Ensure correct boolean value
+    const payload = {
+      name: form.name,
+      address: form.address,
+      total_capacity: form.total_capacity,
+      latitude: form.latitude,
+      longitude: form.longitude,
+      current_occupancy: form.current_occupancy,
+      paid: form.type === 'paid',
+      active: form.camera_active === 'active',
+    };
+
+    try {
+      if (isEditing && form.lotId) {
+        const res = await axios.put(`${API_URL}/parkinglot/${form.lotId}`, payload);
+        if (res.status === 200) {
+          fetchParkings();
+        }
+      } else {
+        const res = await axios.post(`${API_URL}/parkinglot`, payload);
+        if (res.status === 201) {
+          const newParking: ParkingLot = res.data;
+          setParkings((prev) => [newParking, ...prev]);
+          setLastAddedId(newParking.lotId);
+        }
+      }
+
+      setForm({
+        name: '',
+        total_capacity: 0,
+        latitude: '',
+        longitude: '',
+        address: '',
+        current_occupancy: 0,
+        type: 'public',
+        camera_active: 'inactive',
+      });
+      setIsEditing(false);
+
+      if (markerRef.current) {
+        markerRef.current.setMap(null);
+        markerRef.current = null;
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    }
   };
 
-  try {
-    if (isEditing && form.lotId) {
-      const res = await axios.put(`${API_URL}/parkinglot/${form.lotId}`, payload);
-      if (res.status === 200) {
-        console.log("Parking lot updated");
-      }
-    } else {
-      const res = await axios.post(`${API_URL}/parkinglot`, payload);
-      if (res.status === 201) {
-        console.log("Parking lot created");
-      }
-    }
-    setForm({
-      name: '',
-      total_capacity: 0,
-      latitude: '',
-      longitude: '',
-      type: 'public',
-      address: '',
-      current_occupancy: 0,
-      camera_active: 'inactive',
-    });
-    setIsEditing(false);
-    fetchParkings();
-    if (markerRef.current) markerRef.current.setMap(null);
-  } catch (error) {
-    console.error("Error submitting form:", error);
-  }
-};
-
-
   const handleDelete = async (lotId: number) => {
-    await axios.delete(`${API_URL}/parkinglot/${lotId}`);
-    fetchParkings();
+    try {
+      await axios.delete(`${API_URL}/parkinglot/${lotId}`);
+      setParkings((prev) => prev.filter((p) => p.lotId !== lotId));
+
+      // Remove marker from map and memory
+      const marker = markerMap.current.get(lotId);
+      if (marker) {
+        marker.setMap(null);
+        markerMap.current.delete(lotId);
+      }
+    } catch (error) {
+      console.error("Error deleting parking:", error);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -199,8 +240,8 @@ const handleSubmit = async (e: React.FormEvent) => {
           <input className="w-full border rounded p-1.5" name="address" placeholder="Хаяг" value={form.address} onChange={handleChange} />
           <input className="w-full border rounded p-1.5" name="total_capacity" type="number" placeholder="Багтаамж" value={form.total_capacity} onChange={handleChange} />
           <input className="w-full border rounded p-1.5" name="current_occupancy" type="number" placeholder="Одоогийн дүүргэлт" value={form.current_occupancy} onChange={handleChange} />
-          <input className="w-full border rounded p-1.5" name="latitude" placeholder="Өргөрөг" value={form.latitude} onChange={handleChange} onFocus={() => setIsLatFocused(true)} onBlur={() => setIsLatFocused(false)} />
-          <input className="w-full border rounded p-1.5" name="longitude" placeholder="Уртраг" value={form.longitude} onChange={handleChange} onFocus={() => setIsLngFocused(true)} onBlur={() => setIsLngFocused(false)} />
+          <input className="w-full border rounded p-1.5" name="latitude" placeholder="Өргөрөг" value={form.latitude} onChange={handleChange} />
+          <input className="w-full border rounded p-1.5" name="longitude" placeholder="Уртраг" value={form.longitude} onChange={handleChange} />
           <select name="type" value={form.type} onChange={handleChange} className="w-full border rounded p-1.5">
             <option value="public">Нийтийн</option>
             <option value="paid">Төлбөртэй</option>
@@ -209,13 +250,14 @@ const handleSubmit = async (e: React.FormEvent) => {
             <option value="active">Камер идэвхтэй</option>
             <option value="inactive">Камер идэвхгүй</option>
           </select>
+
           <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white rounded py-2 px-4 w-full transition">
             {isEditing ? 'Update Parking' : 'Зогсоол нэмэх'}
           </button>
         </form>
 
         <div className="mt-8 text-center">
-          <h3 className="text-lg font-semibold mb-3">Амжилттай хадгаллаа</h3>
+          <h3 className="text-lg font-semibold mb-3">Зогсоолууд</h3>
           <input
             type="text"
             placeholder="Зогсоолын нэрээр хайх"
@@ -226,7 +268,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
           <div className="space-y-4">
             {filteredParkings.map((p) => (
-              <div key={p.lotId} className="border rounded-lg shadow-sm p-4 bg-gray-50 text-left">
+              <div key={p.lotId} className={`border rounded-lg shadow-sm p-4 ${p.lotId === lastAddedId ? 'bg-green-100' : 'bg-gray-50'} text-left`}>
                 <div className="flex justify-between items-center">
                   <h4 className="font-bold text-lg">{p.name}</h4>
                   <div className="flex space-x-2">
@@ -240,9 +282,9 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
                 <div className="text-sm text-gray-700 mt-1">
                   📍 {p.address} <br />
-                  🧮 {p.current_occupancy} / {p.total_capacity} occupied <br />
+                  🧾 {p.current_occupancy} / {p.total_capacity} occupied <br />
                   🌐 Lat: {p.latitude} | Lng: {p.longitude} <br />
-                  🔒 {p.type ? 'Public' : 'Paid'} | 🎥 {p.camera_active ? 'Active' : 'Inactive'}
+                  🔒 {p.paid ? 'Төлбөртэй' : 'Нийтийн'} | 🎥 {p.active ? 'Идэвхтэй' : 'Идэвхгүй'}
                 </div>
               </div>
             ))}
